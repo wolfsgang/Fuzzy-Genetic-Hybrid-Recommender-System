@@ -1,7 +1,9 @@
-import pandas as pd
+import load_data
 import numpy as np
 from fuzzy_sets import Age, GIM
 import gim
+#Load data form MovieLens data
+
 
 def eucledian(A,B):
     return np.linalg.norm(A-B)
@@ -9,43 +11,45 @@ def eucledian(A,B):
 def fuzzy_dist(a, b, A, B):
     return abs(a-b)*eucledian(A,B)
 #print fuzzy_dist(35, 40, np.array([3, 4 ,5]), np.array([4, 5, 6]))
+#Data Details
+#users_cols ='user_id', 'age', 'sex', 'occupation', 'zip_code'
+#ratings_cols = 'user_id', 'movie_id', 'rating', 'unix_timestamp'
+#i_cols = ['movie_id', 'movie_title' ,'release date','video release date', 'IMDb URL', 'unknown', 'Action', 'Adventure',
+# 'Animation', 'Children\'s', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Fantasy',
+# 'Film-Noir', 'Horror', 'Musical', 'Mystery', 'Romance', 'Sci-Fi', 'Thriller', 'War', 'Western']
+#All in one DataFrame
+mr_ur = pd.merge(users, ratings, on='user_id')
+#df = pd.merge(df1, items, on='movie_id')
 
-#Load data form MovieLens data
-#Load users
-u_cols = ['user_id', 'age', 'sex', 'occupation', 'zip_code']
-users = pd.read_csv('ml-100k/u.user', sep='|', names=u_cols, encoding='latin-1')
-#load ratings
-r_cols = ['user_id', 'movie_id', 'rating', 'unix_timestamp']
-ratings = pd.read_csv('ml-100k/u.data', sep='\t', names=r_cols, encoding='latin-1')
-#load genres
-i_cols = ['movie id', 'movie title' ,'release date','video release date', 'IMDb URL', 'unknown', 'Action', 'Adventure',
- 'Animation', 'Children\'s', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Fantasy',
- 'Film-Noir', 'Horror', 'Musical', 'Mystery', 'Romance', 'Sci-Fi', 'Thriller', 'War', 'Western']
-items = pd.read_csv('ml-100k/u.item', sep='|', names=i_cols,
- encoding='latin-1')
+#Users who has rated movies atleast 60 movies
+top_users = mr_ur.groupby('user_id').size().sort_values(ascending=False)[:497]
 
-#Most rated movies (497 movies having # of movies rared >= 60)
-most_rated = ratings.groupby('movie_id').size().sort_values(ascending=False)[:497]  
-
-#Extract users those have rated most_rated movies
-users_top = [[]]
-for i in most_rated_movies:
-    users_top.append([ratings.loc[ratings['movie_id'] == i]['user_id']])
-user_tops = np.array([users_top])
-
-#Implementing fuzzy sets: class Age and GIM
-#GIM = Genre Interestingness Measure
+#active_users and training_users - pd.Series()
+active_users = top_users.sample(frac=(50/497.0))
+training_users = top_users.drop(active_users.index)
+#Make feature vectors for training users 
+#tu_data - DataFrame(), Get deyails of the users which are in training_users
+tu_data = mr_ur.loc[df['user_id'].isin(training_users)]
+#Get age of all users which are in  tu_data
+tu_age = tu_data['age']
+tu_ages = tu_age.drop_duplicates()
+#Apply fuzzy logic to age feature.
+#Implementing fuzzy sets
 #Use young(), middle(), old() of Age class
 #Use very_bad(), bad(), average(), good(), very_good(), excellent() of GIM class
-#Make an object of Age and GIM classes
+age_columns = ['age', 'age_young', 'age_middle', 'age_old']
+tu_fuzzy_ages = pd.DataFrame(columns=age_columns)
 a = Age()
+j=0
+for i in tu_ages:
+    x =  [i, a.young(i), a.middle(i), a.old(i)]
+    tu_fuzzy_ages.loc[j] = x
+    j = j+1
 g = GIM()
-#Examples of Age and GIM fuzzy sets
 print 'GIM Example for value gim = 3.5:', g.very_bad(3.5), g.bad(3.5), g.average(3.5), g.good(3.5), g.very_good(3.5), g.excellent(3.5) 
-x = []
-y = []
-x =  [a.young(23), a.middle(23), a.old(23)]
-y = [a.young(18), a.middle(18), a.old(18)]
-print "Examples of Fuzzy sets of Age: ", x, y
-#Example of fuzzy distance between two age 18 and 23 and their fuzzy sets
-print "Fuzzty distance between Age 18 and 23: ", fuzzy_dist(23, 18, np.array(x), np.array(y))
+#Example of fuzzy distance between two age 18 and 23 and their fuzzy
+x = [g.very_bad(3.5), g.bad(3.5), g.average(3.5), g.good(3.5), g.very_good(3.5), g.excellent(3.5)]
+y = [g.very_bad(2.5), g.bad(2.5), g.average(2.5), g.good(2.5), g.very_good(2.5), g.excellent(2.5)]
+print x, y
+print "Fuzzy distance between gim 3.5 and 2.5: ", fuzzy_dist(2.5, 3.5, np.array(x), np.array(y))
+
