@@ -26,6 +26,8 @@ top_users = mr_ur.groupby('user_id').size().sort_values(ascending=False)[:497]
 
 #active_users and training_users - pd.Series()
 active_users = top_users.sample(frac=(50/497.0))
+training_active_users = active_users.sample(frac=0.34)
+testing_active_users = training_active_users.drop_duplicates()
 training_users = top_users.drop(active_users.index)
 #Make feature vectors for training users 
 #tu_data - DataFrame(), Get deyails of the users which are in training_users
