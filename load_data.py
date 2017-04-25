@@ -14,4 +14,4 @@ items = pd.read_csv('ml-100k/u.item', sep='|', names=i_cols,
                     encoding='latin-1')
 # All in one DataFrame
 mr_ur = pd.merge(users, ratings, on='user_id')
-df = pd.merge(df1, items, on='movie_id')
+df = pd.merge(mr_ur, items, on='movie_id')
