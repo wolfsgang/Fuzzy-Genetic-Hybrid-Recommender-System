@@ -31,7 +31,7 @@ testing_active_users = training_active_users.drop_duplicates()
 training_users = top_users.drop(active_users.index)
 #Make feature vectors for training users 
 #tu_data - DataFrame(), Get deyails of the users which are in training_users
-tu_data = mr_ur.loc[df['user_id'].isin(training_users)]
+tu_data = mr_ur.loc[mr_ur['user_id'].isin(training_users)]
 #Get age of all users which are in  tu_data
 tu_age = tu_data['age']
 tu_ages = tu_age.drop_duplicates()
