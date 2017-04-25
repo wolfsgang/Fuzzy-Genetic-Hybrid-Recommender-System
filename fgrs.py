@@ -24,39 +24,44 @@ def fuzzy_dist(a, b, A, B):
 # 'Film-Noir', 'Horror', 'Musical', 'Mystery', 'Romance', 'Sci-Fi', 'Thriller', 'War', 'Western']
 # All in one DataFrame
 mr_ur = pd.merge(users, ratings, on='user_id')
-# df = pd.merge(df1, items, on='movie_id')
+df = pd.merge(df1, items, on='movie_id')
 
 # Users who has rated movies atleast 60 movies
-top_users = mr_ur.groupby('user_id').size().sort_values(ascending=False)[:497]
+top_users = load_data.df.groupby('user_id').size().sort_values(ascending=False)[:497]
+m_cols = ['unknown', 'Action', 'Adventure',
+     'Animation', 'Children\'s', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Fantasy',
+     'Film-Noir', 'Horror', 'Musical', 'Mystery', 'Romance', 'Sci-Fi', 'Thriller', 'War', 'Western', 'user_id', 'age']
+model_data_au = pd.DataFrame(columns=m_cols)
+model_data_pu = pd.DataFrame(columns=m_cols)
+#Users who has rated movies atleast 60 movies
 
-# active_users and training_users - pd.Series()
-active_users = top_users.sample(frac=(50 / 497.0))
-training_active_users = active_users.sample(frac=0.34)
-testing_active_users = training_active_users.drop_duplicates()
-training_users = top_users.drop(active_users.index)
-# Make feature vectors for training users
-# tu_data - DataFrame(), Get deyails of the users which are in training_users
-tu_data = mr_ur.loc[mr_ur['user_id'].isin(training_users)]
-# Get age of all users which are in  tu_data
-tu_age = tu_data['age']
-tu_ages = tu_age.drop_duplicates()
-# Apply fuzzy logic to age feature.
-# Implementing fuzzy sets
-# Use young(), middle(), old() of Age class
-# Use very_bad(), bad(), average(), good(), very_good(), excellent() of GIM class
+#Making fuzzy sets for age 13 to 69 
 age_columns = ['age', 'age_young', 'age_middle', 'age_old']
 tu_fuzzy_ages = pd.DataFrame(columns=age_columns)
 a = Age()
-j = 0
-for i in tu_ages:
-    x = [i, a.young(i), a.middle(i), a.old(i)]
+j=0
+#Our user have age in between 13 and 69
+for i in range(13, 70):
+    x =  [i, a.young(i), a.middle(i), a.old(i)]
     tu_fuzzy_ages.loc[j] = x
-    j = j + 1
-g = GIM()
-print 'GIM Example for value gim = 3.5:', g.very_bad(3.5), g.bad(3.5), g.average(3.5), g.good(3.5), g.very_good(
-    3.5), g.excellent(3.5)
-# Example of fuzzy distance between two age 18 and 23 and their fuzzy
-x = [g.very_bad(3.5), g.bad(3.5), g.average(3.5), g.good(3.5), g.very_good(3.5), g.excellent(3.5)]
-y = [g.very_bad(2.5), g.bad(2.5), g.average(2.5), g.good(2.5), g.very_good(2.5), g.excellent(2.5)]
-print x, y
-print "Fuzzy distance between gim 3.5 and 2.5: ", fuzzy_dist(2.5, 3.5, np.array(x), np.array(y))
+    j = j+1
+    
+for i in range(0,5):
+    #active_users and passive_users - pd.Series()
+    active_users = top_users.sample(frac=0.10)
+    training_active_users = active_users.sample(frac=0.34)
+    testing_active_users = active_users.drop(training_active_users.index)
+    passive_users = top_users.drop(active_users.index)
+    
+    tau_data = df.loc[df['user_id'].isin(training_active_users)][:10]
+    for key, value in tau_data.iterrows():
+        user_ui_movies = df.loc[df['user_id']==value['user_id']]
+        #print user_ui_movies.shape
+        gim_array = gim.gim_final(user_ui_movies, value['user_id'])
+        print 'GIM array', gim_array
+        gim_array[19] = value['user_id']
+        gim_array[20] = value['age']
+        print gim_array.shape
+        index = 0
+        gim_row = pd.DataFrame(gim_array, columns=m_cols)
+        model_data_au.append(gim_row)
