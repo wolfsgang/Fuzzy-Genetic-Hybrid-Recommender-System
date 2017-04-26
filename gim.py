@@ -13,18 +13,13 @@ mrgf1 = np.zeros(19)
 gim1 = np.zeros(21)
 
 
-def tr(i):
-    total = 0
-    for k in count['rating']:
-        total = total + k
-    return total
-
-
 # Genre rating of Genre Gj for user ui.
 def gr(movies):
-    temp = 0
     for i in range(0, 19):
-        gr1[i] = np.dot(movies['rating'], movies[i_cols[i]])
+        # check this
+        m = movies.loc[movies[i_cols[i]] != 0]
+        gr1[i] = np.sum(m['rating'])
+        # print "here",gr1[i]
     return gr1
 
 
@@ -34,13 +29,13 @@ def gf(movies):
     return gf1
 
 
-def rgr(movies, gr1, tr):
+def rgr(gr1, tr):
     for i in range(0, 19):
         rgr1[i] = gr1[i] / tr
     return rgr1
 
 
-def rgf(movies, gf1, tf):
+def rgf(gf1, tf):
     for i in range(0, 19):
         rgf1[i] = gf1[i] / tf
     return rgf1
@@ -69,15 +64,15 @@ def gim_final(m, i):
     for k in m['rating']:
         tr = tr + k
     movies = m.loc[m['rating'] >= 3.0]
-    #print 'Movies shape :', movies.shape
+    # print 'Movies shape :', movies.shape
     gr1 = gr(movies)
     gf1 = gf(movies)
-    rgr1 = rgr(movies, gr1, tr)
-    rgf1 = rgf(movies, gf1, tf)
+    rgr1 = rgr(gr1, tr)
+    rgf1 = rgf(gf1, tf)
     mrgf1 = mrgf(movies, tf)
-    #print mrgf1
+    # print mrgf1
     nf = 5.0
     for i in range(0, 19):
-        gim1[i] = (2 * nf * mrgf1[i] * rgr1[i]) / (rgr1[i] + mrgf1[i])
+        gim1[i] = (2 * nf * mrgf1[i] * rgr1[i]) / (rgr1[i] + mrgf1[i]) if (rgr1[i] + mrgf1[i]) != 0 else 0
     gim = np.nan_to_num(gim1)
     return gim
