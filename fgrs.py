@@ -36,6 +36,7 @@ def fuzzy_distance(ui, uj):
 
 
 def recommend(neighbours, testing):
+    ms = 0
     for key, item in testing.iterrows():
         ar,m_id = item['rating'],item['movie_id']
         n_ratings = []
@@ -43,8 +44,10 @@ def recommend(neighbours, testing):
             temp = df.loc[df['user_id'] == i].loc[df['movie_id'] == m_id]
             for k, it in temp.iterrows():
                 n_ratings.append(it['rating'])
-        pr = sum(n_ratings) / len(n_ratings) if len(n_ratings) else 0
-    return abs(pr - ar)
+        pr = float(sum(n_ratings)) / len(n_ratings) if len(n_ratings) else 0
+        ms += abs(pr-ar)
+    print testing.shape[0]
+    return ms/testing.shape[0]
 
 
 # print fuzzy_dist(35, 40, np.array([3, 4 ,5]), np.array([4, 5, 6]))
