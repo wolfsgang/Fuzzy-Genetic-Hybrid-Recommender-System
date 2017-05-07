@@ -120,7 +120,7 @@ for i in range(0, 5):
         for key1, value1 in model_data_pu.iterrows():
             fuzzy_vec.append(fuzzy_distance(value, value1))
             # print value[i], value1[i]
-            fuzzy_vec[i] = [sum(x * 0.5 for x in fuzzy_vec[i][:-1]), fuzzy_vec[i][-1]]
+            fuzzy_vec[i] = [(sum(x for x in fuzzy_vec[i][:-1]))**0.5, fuzzy_vec[i][-1]]
             i = i + 1
         # print fuzzy_vec
         neighbours = [n[1] for n in sorted(fuzzy_vec, key=operator.itemgetter(0), reverse=True)][:30]  # taking top 30
