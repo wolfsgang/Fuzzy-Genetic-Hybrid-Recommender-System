@@ -1,9 +1,11 @@
-import load_data
-import pandas as pd
-import numpy as np
-from fuzzy_sets import Age, GIM
-import gim
 import operator
+
+import numpy as np
+import pandas as pd
+
+import gim
+import load_data
+from fuzzy_sets import Age, GIM
 
 a = Age()
 g = GIM()
@@ -38,96 +40,111 @@ def fuzzy_distance(ui, uj):
 def recommend(neighbours, testing):
     ms = 0
     for key, item in testing.iterrows():
-        ar,m_id = item['rating'],item['movie_id']
+        ar, m_id = item['rating'], item['movie_id']
         n_ratings = []
         for i in neighbours:
             temp = df.loc[df['user_id'] == i].loc[df['movie_id'] == m_id]
             for k, it in temp.iterrows():
                 n_ratings.append(it['rating'])
-        pr = float(sum(n_ratings)) / len(n_ratings) if len(n_ratings) else 0
-        ms += abs(pr-ar)
-    print testing.shape[0]
-    return ms/testing.shape[0]
+        pr = float(sum(n_ratings)) / len(n_ratings) if len(n_ratings) else 0.0
+        ms += abs(pr - ar)
+    print(testing.shape[0])
+    return ms / testing.shape[0]
+
+
+def run(iterations=5, active_user_fraction=0.10, training_fraction=0.34):
+    maes = []
+    rng_seed = 42
 
 
 # print fuzzy_dist(35, 40, np.array([3, 4 ,5]), np.array([4, 5, 6]))
 # Data Details
-# users_cols ='user_id', 'age', 'sex', 'occupation', 'zip_code'
-# ratings_cols = 'user_id', 'movie_id', 'rating', 'unix_timestamp'
-# i_cols = ['movie_id', 'movie_title' ,'release date','video release date', 'IMDb URL', 'unknown', 'Action', 'Adventure',
-# 'Animation', 'Children\'s', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Fantasy',
-# 'Film-Noir', 'Horror', 'Musical', 'Mystery', 'Romance', 'Sci-Fi', 'Thriller', 'War', 'Western']
-# All in one DataFrame
-mr_ur = pd.merge(load_data.users, load_data.ratings, on='user_id')
-df = pd.merge(mr_ur, load_data.items, on='movie_id')
-m_cols = ['unknown', 'Action', 'Adventure',
-          'Animation', 'Children\'s', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Fantasy',
-          'Film-Noir', 'Horror', 'Musical', 'Mystery', 'Romance', 'Sci-Fi', 'Thriller', 'War', 'Western', 'age',
-          'user_id']
-model_data_au = pd.DataFrame(columns=m_cols)
-feature_row = pd.DataFrame(columns=m_cols)
-model_data_pu = pd.DataFrame(columns=m_cols)
-# Users who has rated movies atleast 60 movies
-top_users = load_data.df.groupby('user_id').size().sort_values(ascending=False)[:497]
+    # users_cols ='user_id', 'age', 'sex', 'occupation', 'zip_code'
+    # ratings_cols = 'user_id', 'movie_id', 'rating', 'unix_timestamp'
+    # i_cols = ['movie_id', 'movie_title' ,'release date','video release date', 'IMDb URL', 'unknown', 'Action', 'Adventure',
+    # 'Animation', 'Children\'s', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Fantasy',
+    # 'Film-Noir', 'Horror', 'Musical', 'Mystery', 'Romance', 'Sci-Fi', 'Thriller', 'War', 'Western']
+    # All in one DataFrame
+    mr_ur = pd.merge(load_data.users, load_data.ratings, on='user_id')
+    global df
+    df = pd.merge(mr_ur, load_data.items, on='movie_id')
+    m_cols = ['unknown', 'Action', 'Adventure',
+              'Animation', 'Children\'s', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Fantasy',
+              'Film-Noir', 'Horror', 'Musical', 'Mystery', 'Romance', 'Sci-Fi', 'Thriller', 'War', 'Western', 'age',
+              'user_id']
 
-for i in range(0, 5):
+    # Users who has rated movies atleast 60 movies
+    top_users = load_data.df.groupby('user_id').size().sort_values(ascending=False)[:497]
+
+    for run_idx in range(iterations):
     # active_users and passive_users - pd.Series()
-    active_users = top_users.sample(frac=0.10)
+        active_users = top_users.sample(frac=active_user_fraction, random_state=rng_seed + run_idx)
 
     # training_active_users = active_users.sample(frac=0.34)
     # testing_active_users = active_users.drop(training_active_users.index)
 
-    passive_users = top_users.drop(active_users.index)
+        passive_users = top_users.drop(active_users.index)
     # To change this # active users
-    tau_data = df.loc[df['user_id'].isin(active_users)][:10]
-    index = np.arange(0, tau_data.shape[0])
-    i = 0
-    for key, value in tau_data.iterrows():
-        user_ui_movies = df.loc[df['user_id'] == value['user_id']]
+        model_data_au = pd.DataFrame(columns=m_cols)
+        model_data_pu = pd.DataFrame(columns=m_cols)
 
-        training_user_movies = user_ui_movies.sample(frac=0.34)
-        feature_array = gim.gim_final(training_user_movies, value['user_id'])
+        tau_data = df.loc[df['user_id'].isin(active_users)][:10]
+        i = 0
+        for key, value in tau_data.iterrows():
+            user_ui_movies = df.loc[df['user_id'] == value['user_id']]
+
+            training_user_movies = user_ui_movies.sample(frac=training_fraction, random_state=rng_seed)
+            feature_array = gim.gim_final(training_user_movies, value['user_id'])
 
         # print 'GIM array', feature_array
-        feature_array[19], feature_array[20] = value['age'], value['user_id']
+            feature_array[19], feature_array[20] = value['age'], value['user_id']
         # print feature_array.shape
-        model_data_au.loc[i] = feature_array
-        i = i + 1
+            model_data_au.loc[i] = feature_array
+            i = i + 1
     # print model_data_au
     # print model_data_au
     # Working with passive users
     # change # of passive users
 
-    i = 0
-    pu_data = df.loc[df['user_id'].isin(passive_users)][:10]
+        i = 0
+        pu_data = df.loc[df['user_id'].isin(passive_users)][:10]
 
-    for key, value in pu_data.iterrows():
-        user_ui_movies = df.loc[df['user_id'] == value['user_id']]
-        feature_array_p = gim.gim_final(user_ui_movies, value['user_id'])
+        for key, value in pu_data.iterrows():
+            user_ui_movies = df.loc[df['user_id'] == value['user_id']]
+            feature_array_p = gim.gim_final(user_ui_movies, value['user_id'])
         # print 'GIM array', feature_array
-        feature_array_p[19], feature_array_p[20] = value['age'], value['user_id']
+            feature_array_p[19], feature_array_p[20] = value['age'], value['user_id']
         # print feature_array.shape
-        model_data_pu.loc[i] = feature_array_p
-        i = i + 1
+            model_data_pu.loc[i] = feature_array_p
+            i = i + 1
     # print model_data_au
     # print model_data_pu
 
     # fuzzy_df = pd.DataFrame(columns=m_cols)
-    fuzzy_vec = []
-    error = []
-    for key, value in model_data_au.iterrows():
-        i = 0
-        for key1, value1 in model_data_pu.iterrows():
-            fuzzy_vec.append(fuzzy_distance(value, value1))
-            # print value[i], value1[i]
-            fuzzy_vec[i] = [(sum(x for x in fuzzy_vec[i][:-1]))**0.5, fuzzy_vec[i][-1]]
-            i = i + 1
+        error = []
+        for key, value in model_data_au.iterrows():
+            fuzzy_vec = []
+            i = 0
+            for key1, value1 in model_data_pu.iterrows():
+                fuzzy_vec.append(fuzzy_distance(value, value1))
+                # print value[i], value1[i]
+                fuzzy_vec[i] = [(sum(x for x in fuzzy_vec[i][:-1])) ** 0.5, fuzzy_vec[i][-1]]
+                i = i + 1
         # print fuzzy_vec
-        neighbours = [n[1] for n in sorted(fuzzy_vec, key=operator.itemgetter(0), reverse=True)][:30]  # taking top 30
+            neighbours = [n[1] for n in sorted(fuzzy_vec, key=operator.itemgetter(0), reverse=True)][:30]  # taking top 30
         # print neighbours
-        testing_user = df.loc[df['user_id'] == value['user_id']].sample(frac=0.66)
-        e = recommend(neighbours, testing_user)
-        print e
-        error.append(e)
-    MAE = sum(error) / len(error)
-    print "MAE is" + MAE
+            testing_user = df.loc[df['user_id'] == value['user_id']].sample(frac=0.66, random_state=rng_seed)
+            e = recommend(neighbours, testing_user)
+            print(e)
+            error.append(e)
+        mae = sum(error) / len(error)
+        maes.append(mae)
+        print(f"Run {run_idx + 1} MAE: {mae:.4f}")
+
+    final_mae = sum(maes) / len(maes)
+    print(f"Overall MAE: {final_mae:.4f}")
+    return final_mae
+
+
+if __name__ == '__main__':
+    run()
